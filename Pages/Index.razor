@@ -1,0 +1,82 @@
+﻿@page "/"
+@using poketest.Data
+@using static System.Net.WebRequestMethods
+@inject HttpClient Http
+
+<PageTitle>Index</PageTitle>
+
+<h1>Hello, world!</h1>
+<button @onclick="CallApi">Load Pokémon</button>
+
+<ul>
+    @foreach (var pokemon in pokemons)
+    {
+        <li>@pokemon.Name (@pokemon.Id)</li>
+    }
+</ul>
+
+
+
+@code {
+    private List<Pokemon> pokemons = new List<Pokemon>();
+
+    private async Task CallApi()
+    {
+        pokemons.Clear();  // Clear the list before fetching new data
+
+        for (int i = 1; i <= 10; i++)  // Fetch first 10 Pokémon
+        {
+            var url = $"https://pokeapi.co/api/v2/pokemon/{i}";
+            var response = await Http.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonString = await response.Content.ReadAsStringAsync();
+
+                if (string.IsNullOrWhiteSpace(jsonString))
+                {
+                    Console.WriteLine($"Error: Empty response for Pokémon ID {i}");
+                    continue;
+                }
+
+                try
+                {
+                    var pokemon = System.Text.Json.JsonSerializer.Deserialize<Pokemon>(jsonString, new System.Text.Json.JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
+                    if (pokemon != null)
+                    {
+                        pokemons.Add(pokemon);
+                        Console.WriteLine($"{pokemon.Name} {pokemon.Id}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Error: No Pokémon data for ID {i}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Deserialization error for ID {i}: {ex.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Error: {response.StatusCode} for Pokémon ID {i}");
+            }
+        }
+    }
+
+    public class Pokemon
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+    }
+}
+
+
+
+
+
+
